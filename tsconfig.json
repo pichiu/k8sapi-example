@@ -1,0 +1,21 @@
+{
+  "compilerOptions": {
+    "module": "commonjs",
+    "target": "es6",
+    // "esModuleInterop": true,
+    // "noImplicitAny": false,
+    "sourceMap": true,
+    "rootDir": "./src",
+    "outDir": "./dist",
+    // "watch": true,
+    // "declaration": true,
+    // "stripInternal": true,
+    // "experimentalDecorators": true,
+    // "emitDecoratorMetadata": true ,
+    // "types": [
+    //   "mocha"
+    // ]
+  },
+  "include": ["./src/**/*"],
+  "exclude": ["views", "static"]
+}

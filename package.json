@@ -1,0 +1,14 @@
+{
+  "name": "k8s-api-example-app",
+  "version": "1.0.0",
+  "description": "k8s js api example",
+  "author": "",
+  "main": "./dist/k8sapi/example.js",
+  "scripts": {
+    "build": "tsc",
+    "start": "node ./dist/k8sapi/example.js"
+  },
+  "dependencies": {
+    "@kubernetes/client-node": "^0.11.2" 
+  }
+}
