@@ -1,5 +1,15 @@
 import k8s = require('@kubernetes/client-node');
 
+export interface K8sJob {
+    name: string;
+    namespace: string;
+    containers: Array<k8s.V1Container>;
+    restartPolicy: string;
+    activeDeadlineSeconds?: number;
+    backoffLimit?: number;
+    completions?: number;
+    parallelism?: number;
+}
 export default class K8sJobManager {
     private static sInstance: K8sJobManager;
     private mKc: k8s.KubeConfig;
@@ -23,32 +33,32 @@ export default class K8sJobManager {
         return new k8s.Watch(this.mKc);
     }
 
-    public async createJob({ jobname, namespace = "default", containers, activeDeadlineSeconds, backoffLimit, completions, parallelism, restartPolicy = "Never" }: { jobname: string; namespace: string; containers: Array<k8s.V1Container>; activeDeadlineSeconds?: number; backoffLimit?: number; completions?: number; parallelism?: number; restartPolicy?: string; }) {
+    public async createJob(job: K8sJob) {
         let body = {
             apiVersion: "batch/v1",
             kind: "Job",
             metadata: {
-                name: jobname
+                name: job.name
             } as k8s.V1ObjectMeta,
             spec: {
-                activeDeadlineSeconds: activeDeadlineSeconds,
-                backoffLimit: backoffLimit,
-                completions: completions,
-                parallelism: parallelism,
+                activeDeadlineSeconds: job.activeDeadlineSeconds,
+                backoffLimit: job.backoffLimit,
+                completions: job.completions,
+                parallelism: job.parallelism,
                 template: {
                     spec: {
-                        containers: containers,
-                        restartPolicy: restartPolicy
+                        containers: job.containers,
+                        restartPolicy: job.restartPolicy
                     } as k8s.V1PodSpec
                 } as k8s.V1PodTemplateSpec
             } as k8s.V1JobSpec
         } as k8s.V1Job;
-        return await this.mK8sBatchV1Api.createNamespacedJob(namespace, body);
+        return await this.mK8sBatchV1Api.createNamespacedJob(job.namespace, body);
     }
 
-    public async deleteJobs(jobname: string, namespace: string) {
+    public async deleteJobs(job: K8sJob) {
         try {
-            await this.mK8sBatchV1Api.deleteNamespacedJob(jobname, namespace);
+            await this.mK8sBatchV1Api.deleteNamespacedJob(job.name, job.namespace);
         } catch(error) {
             if (error.body.code == 404) {
                 //item not found
@@ -59,8 +69,8 @@ export default class K8sJobManager {
         }
     }
 
-    public async watchJobs(jobname: string, namespace: string) {
-        await this.newWatch().watch(`/apis/batch/v1/namespaces/${namespace}/jobs`,
+    public async watchJobs(job: K8sJob) {
+        await this.newWatch().watch(`/apis/batch/v1/namespaces/${job.namespace}/jobs`,
         // optional query parameters can go here.
         {},
         // callback is called for each received object.
@@ -71,16 +81,16 @@ export default class K8sJobManager {
             } else if (type === 'MODIFIED') {
                 // tslint:disable-next-line:no-console
                 console.log('changed object:');
-                if (obj!.metadata.name === jobname) {
+                if (obj!.metadata.name === job.name) {
                     console.log("Status: " + JSON.stringify(obj.status, null, 2));
                     if (obj.status.conditions!.find(o => ["Complete","Failed"].includes(o.type))) {
-                        this.deleteJobs(jobname, namespace);
+                        this.deleteJobs(job);
                     }
                 }
             } else if (type === 'DELETED') {
                 // tslint:disable-next-line:no-console
                 console.log('deleted object:');
-                if (obj!.metadata.name === jobname) {
+                if (obj!.metadata.name === job.name) {
                     setTimeout((function() {
                         console.log("Exit!")
                         return process.exit(1);
